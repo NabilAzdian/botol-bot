@@ -13,7 +13,7 @@ const
 		ProxyAgent,
 		GroupSettingChange,
 		waChatKey,
-		mentionedJid
+		mentionedJid,
 	} = require("@adiwajshing/baileys")
 const qrcode = require("qrcode-terminal")
 const moment = require("moment-timezone")
@@ -32,6 +32,19 @@ const toMs = require('ms')
 const figlet = require('figlet')
 const lolcatjs = require('lolcatjs')
 const phoneNum = require('awesome-phonenumber')
+const Insta = require('scraper-instagram');
+const instagramGetUrl = require("instagram-url-direct")
+const request = require('request');
+const InstaClient = new Insta();
+const { EmojiAPI } = require("emoji-api");
+const emoji = new EmojiAPI()
+const Fb = require('fb-video-downloader');
+const ig = require('insta-fetcher')
+const gis = require('g-i-s');
+const got = require("got");
+const ID3Writer = require('browser-id3-writer');
+const brainly = require('brainly-scraper')
+const yts = require('yt-search')
 
 /* CALLBACK */
 const { wait, getBuffer, h2k, generateMessageID, getGroupAdmins, getRandom, banner, start, info, success, close } = require('./lib/functions')
@@ -54,6 +67,7 @@ const imagenye = JSON.parse(fs.readFileSync('./src/image.json'))
 const truth = JSON.parse(fs.readFileSync('./src/truth.json'))
 const dare = JSON.parse(fs.readFileSync('./src/dare.json'))
 const config = JSON.parse(fs.readFileSync('./config.json'))
+const { yta, ytv } = require('./lib/ytdl')
 const time = moment().tz('Asia/Jakarta').format("HH:mm:ss")
 const timet = moment().tz('Asia/Jakarta').format("HH:mm")
 const vcard = 'BEGIN:VCARD\n' 
@@ -193,6 +207,60 @@ async function starts() {
             const sendPtt = (audio) => {
       			client.sendMessage(from, audio, mp3, { quoted: mek })
       		}
+      		
+      		const sendStickerFromUrl = async (from, url) => {
+      		  var names = Date.now() / 10000;
+      		  var download = function(uri, filename, callback) {
+      		    request.head(uri, function(err, res, body) {
+      		      request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
+      		    });
+      		  };
+      		  download(url, './stik' + names + '.png', async function() {
+      		    console.log('selesai');
+      		    let filess = './stik' + names + '.png'
+      		    let asw = './stik' + names + '.webp'
+      		    exec(`ffmpeg -i ${filess} -vcodec libwebp -filter:v fps=fps=20 -lossless 1 -loop 0 -preset default -an -vsync 0 -s 512:512 ${asw}`, (err) => {
+      		      let media = fs.readFileSync(asw)
+      		      client.sendMessage(from, media, MessageType.sticker, { quoted: mek })
+      		      fs.unlinkSync(filess)
+      		      fs.unlinkSync(asw)
+      		    });
+      		  });
+      		}
+      		  
+      		  const sendMediaURL = async (from, url, text = "", mids = []) => {
+      		    if (mids.length > 0) {
+      		      text = normalizeMention(from, text, mids)
+      		    }
+      		    const fn = Date.now() / 10000;
+      		    const filename = fn.toString()
+      		    let mime = ""
+      		    var download = function(uri, filename, callback) {
+      		      request.head(uri, function(err, res, body) {
+      		        mime = res.headers['content-type']
+      		        request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
+      		      });
+      		    };
+      		    download(url, filename, async function() {
+      		      console.log('Selesai');
+      		      let media = fs.readFileSync(filename)
+      		      let type = mime.split("/")[0] + "Message"
+      		      if (mime === "image/gif") {
+      		        type = MessageType.video
+      		        mime = Mimetype.gif
+      		      }
+      		      if (mime.split("/")[0] === "audio") {
+      		        mime = Mimetype.mp4Audio
+      		      }
+      		      client.sendMessage(from, media, type, { quoted: mek, mimetype: mime, caption: text, contextInfo: { "mentionedJid": mids } })
+      		  
+      		      fs.unlinkSync(filename)
+      		    });
+      		  }
+      		  
+      		  const fakethumb = (teks, yes) => {
+      		    client.sendMessage(from, teks, image, { thumbnail: fs.readFileSync('./src/image/thumbnail.jpeg'), quoted: mek, caption: yes })
+      		  }
       		  
         		const fakestatus = (teks) => {
         			client.sendMessage(from, teks, text, {
@@ -235,7 +303,7 @@ async function starts() {
         			})
         		}
               mess = {
-                wait: 'Sedang di proses...',
+                wait: '*Sedang di proses...*',
                 success: 'Berhasil!',
                 wrongFormat: 'Format salah, coba liat lagi di menu',
                 error: {
@@ -326,6 +394,155 @@ async function starts() {
                     })
                     break
                     case 'play':
+                      if (args.length === 0) return reply(`Kirim perintah *${prefix}play* _Judul lagu yang akan dicari_`)
+                    var srch = args.join('')
+                    aramas = await yts(srch);
+                    aramat = aramas.all
+                    var mulaikah = aramat[0].url
+                    try {
+                      yta(mulaikah)
+                        .then((res) => {
+                          const { dl_link, thumb, title, filesizeF, filesize } = res
+                          axios.get(`https://tinyurl.com/api-create.php?url=${dl_link}`)
+                            .then(async (a) => {
+                              if (Number(filesize) >= 100000) return sendMediaURL(from, thumb, `\n\n*Title* : ${title}\n*Ext* : MP3\n*Filesize* : ${filesizeF}\n*Link* : ${a.data}\n\n_Untuk durasi lebih dari batas disajikan dalam mektuk link_`)
+                              const captions = `*PLAY MUSIC*\n\n*Title* : ${title}\n*Ext* : MP3\n*Size* : ${filesizeF}\n\n_Silahkan tunggu file media sedang dikirim mungkin butuh beberapa menit_`
+                              sendMediaURL(from, thumb, captions)
+                              sendMediaURL(from, dl_link).catch(() => reply('error'))
+                            })
+                        })
+                    } catch (err) {
+                      reply(mess.error.bug)
+                    }
+                    break
+                    case 'ytmp4':
+              			if (args.length === 0) return reply(`Kirim perintah *${prefix}ytmp4 [linkYt]*`)
+              			let isLinks2 = args[0].match(/(?:https?:\/{2})?(?:w{3}\.)?youtu(?:be)?\.(?:com|be)(?:\/watch\?v=|\/)([^\s&]+)/)
+              			if (!isLinks2) return reply(mess.error.Iv)
+              				try {
+              				reply(mess.wait)
+              				ytv(args[0])
+              				.then((res) => {
+              				const { dl_link, thumb, title, filesizeF, filesize } = res
+              				axios.get(`https://tinyurl.com/api-create.php?url=${dl_link}`)
+              				.then((a) => {
+              				if (Number(filesize) >= 40000) return sendMediaURL(from, thumb, `*YTMP 4!*\n\n*Title* : ${title}\n*Ext* : MP3\n*Filesize* : ${filesizeF}\n*Link* : ${a.data}\n\n_Untuk durasi lebih dari batas disajikan dalam mektuk link_`)
+              				const captionsYtmp4 = `*Data Berhasil Didapatkan!*\n\n*Title* : ${title}\n*Ext* : MP4\n*Size* : ${filesizeF}\n\n_Silahkan tunggu file media sedang dikirim mungkin butuh beberapa menit_`
+              				sendMediaURL(from, thumb, captionsYtmp4)
+              				sendMediaURL(from, dl_link).catch(() => reply(mess.error.bug))
+              				})		
+              				})
+              				} catch (err) {
+              			    reply(mess.error.bug)
+              				}
+              				break
+                  	case 'emoji':
+              			if (!q) return fakegroup('emojinya?')
+              			qes = args.join(' ')
+              			emoji.get(`${qes}`).then(emoji => {
+              			teks = `${emoji.images[4].url}`
+                  		sendStickerFromUrl(from,`${teks}`)	
+                  		console.log(teks)
+                 			})
+                  		break
+                  	case 'ytmp3':
+              			if (args.length === 0) return reply(`Kirim perintah *${prefix}ytmp3 [linkYt]*`)
+              			let isLinks = args[0].match(/(?:https?:\/{2})?(?:w{3}\.)?youtu(?:be)?\.(?:com|be)(?:\/watch\?v=|\/)([^\s&]+)/)
+              			if (!isLinks) return reply(mess.error.Iv)
+              				try {
+              				reply(mess.wait)
+              				yta(args[0])
+              				.then((res) => {
+              				const { dl_link, thumb, title, filesizeF, filesize } = res
+              				axios.get(`https://tinyurl.com/api-create.php?url=${dl_link}`)
+              				.then((a) => {
+              			    if (Number(filesize) >= 30000) return sendMediaURL(from, thumb, `*Data Berhasil Didapatkan!*\n\n*Title* : ${title}\n*Ext* : MP3\n*Filesize* : ${filesizeF}\n*Link* : ${a.data}\n\n_Untuk durasi lebih dari batas disajikan dalam mektuk link_`)
+              				const captions = `*YTMP3*\n\n*Title* : ${title}\n*Ext* : MP3\n*Size* : ${filesizeF}\n\n_Silahkan tunggu file media sedang dikirim mungkin butuh beberapa menit_`
+              				sendMediaURL(from, thumb, captions)
+              				sendMediaURL(from, dl_link).catch(() => reply(mess.error.bug))
+              				})
+              				})
+              				} catch (err) {
+              				reply(mess.error.bug)
+              				}
+              				break
+                     case 'image':
+                          if (args.length < 1) return reply('Masukan teks!')
+                          const gimg = args[0];
+                          gis(gimg, async (error, result) => {
+                          for (var i = 0; i < (result.length < 3 ? result.length : 3); i++) {
+                          var get = got(result[i].url);
+                          var stream = get.buffer();
+                          stream.then(async (images) => {
+                           await fakethumb(images);
+                          });
+                          }
+                          });
+                          break
+                     case 'brainly':
+                  			if (args.length < 1) return reply('Pertanyaan apa')
+                            	brien = args.join(' ')
+                  			brainly(`${brien}`).then(res => {
+                  			teks = '❉───────────────────────❉\n'
+                  			for (let Y of res.data) {
+                  			teks += `\n*「 _BRAINLY_ 」*\n\n*➸ Pertanyaan:* ${Y.pertanyaan}\n\n*➸ Jawaban:* ${Y.jawaban[0].text}\n❉──────────────────❉\n`
+                  			}
+                  			client.sendMessage(from, teks, text,{quoted:mek,detectLinks: false})                        
+                              })              
+              		    	break
+                      case prefix + 'ig':
+                        if (!q) return fakegroup('Linknya?')
+                      te = args.join(' ')
+                      let links = await instagramGetUrl(`${te}`)
+                      tek = `${links.url_list[0]}`
+                      teks = `*DONE*\n\n*Link Dari* : ${args.join(' ')}`
+                      sendMediaURL(from, tek, teks)
+                      console.log(tek)
+                      break
+                     case 'igstalk':
+                      if (!q) return fakegroup('Usernamenya?')
+                      var username = args.join(' ')
+                      Instaclient.getProfile(username)
+                      .then(Y => {
+                      var ten = `${Y.pic}`
+                      teks = `*ID* : ${Y.id}\n*Username* : ${args.join('')}\n*Bio* : ${Y.bio}\n*Followers* : ${Y.followers}\n*Following* : ${Y.following}\n*Private* : ${Y.private}\n*Verified* : ${Y.verified}\n\n*Link* : ${Y.link}`
+                      sendMediaURL(from,ten,teks)
+                      }) 
+                      break  
+                      case 'fb':
+                      if (!q) return reply('Linknya?')
+                      te = args.join(' ')
+                      fakestatus(mess.wait)
+                      Fb.getInfo(`${te}`)
+                      .then(G => {
+                      ten = `${G.download.sd}`
+                      tek = `${G.title}`
+                      sendMediaURL(from,ten,`*Title* : ${tek}\n\n*Link* : ${ten}`)
+                      })
+                      break 
+                    case 'ytsearch':
+                      if (args.length < 1) return reply('Tolong masukan query!')
+                    var srch = args.join('');
+                    try {
+                      var aramas = await yts(srch);
+                    } catch {
+                      return await client.sendMessage(from, 'Error!', MessageType.text, dload)
+                    }
+                    aramat = aramas.all
+                    var tbuff = await getBuffer(aramat[0].image)
+                    var ytresult = '';
+                    ytresult += '「 *YOUTUBE SEARCH* 」'
+                    ytresult += '\n________________________\n\n'
+                    aramas.all.map((video) => {
+                      ytresult += '❏ Title: ' + video.title + '\n'
+                      ytresult += '❏ Link: ' + video.url + '\n'
+                      ytresult += '❏ Durasi: ' + video.timestamp + '\n'
+                      ytresult += '❏ Upload: ' + video.ago + '\n________________________\n\n'
+                    });
+                    ytresult += '◩ *BOTOL-BOT*'
+                    await fakethumb(tbuff, ytresult)
+                    break
+                    case 'playmp32':
                     if (!q) return fakegroup(mess.wrongFormat)
                     data = await fetchJson(`https://api.vhtear.com/ytmp3?query=${q}&apikey=${config.vhtearkey}`, { method: 'get' })
                     playmp3 = data.result
@@ -345,7 +562,7 @@ async function starts() {
                     bufferss = await getBuffer(playmp3.mp3)
                     client.sendMessage(from, bufferss, MessageType.audio, { mimetype: 'audio/mp4', filename: `${playmp3.title}.mp3`, quoted: playing })
                     break
-                    case 'ytmp4':
+                    case 'ytmp42':
                     if (!q) return fakegroup(mess.wrongFormat)
                     fetchytmp4 = await fetchJson(`https://api.zeks.xyz/api/ytmp4/2?url=${q}&apikey=apivinz`, { method: 'get' })
                     ytmp4 = fetchytmp4.result
@@ -364,7 +581,7 @@ async function starts() {
                     buffermp4 = await getBuffer(ytmp4.link)
                     client.sendMessage(from, buffermp4, video, { mimetype: 'video/mp4', caption: resultytmp4, quoted: replymp4 })
                     break
-                    case 'ytmp3':
+                    case 'ytmp32':
                                         if (!q) return fakegroup(mess.wrongFormat)
                                         fetchytmp3 = await fetchJson(`https://api.vhtear.com/ytmp3?query=${q}&apikey=$=${config.vhtearkey}`, { method: 'get' })
                                         ytmp3 = fetchytmp3.result
@@ -384,7 +601,7 @@ async function starts() {
                                         const buffermp3 = await getBuffer(ytmp3.mp3)
                                         client.sendMessage(from, buffermp3, audio, { mimetype: 'audio/mp4', "filename": `${ytmp3.title}.mp3`, quoted: replymp3 })
                                         break
-                    case 'igstalk':
+                    case 'igstalk2':
                                         if (!q) return fakegroup(mess.wrongFormat)
                                         try {
                                           fakegroup(mess.wait)
@@ -430,21 +647,6 @@ async function starts() {
                                                         }
                                                         client.sendMessage(from, thumb, image, { caption: `*PINTEREST*\n\n\n• Hasil dari: ${q}\n\n• Link pinterest:\n` + pimterest, quoted: mek })
                                                         break
-                     case 'ig':
-                    if (!q) return fakegroup(mess.wrongFormat)
-                    igg = await fetchJson(`https://api.vhtear.com/instadl?link=${q}&apikey=${config.vhtearkey}`)
-                    for(let ig of igg.post){
-                    if (ig.type === "image") {
-                    buffig = await getBuffer(ig.urlDownload)
-                    captigi = `${igg.caption}\n\nby ${igg.owner_username}`
-                    client.sendMessage(from, buffig, MessageType.image, { caption: captigi, quoted: mek })
-                    } else {
-                    bufvig = await getBuffer(ig.urlDownload)
-                    captigv = `${igg.caption}\n\nby ${igg.owner_username}`
-                    client.sendMessage(from, bufvig, MessageType.video, { caption: captigv, mimetype: 'video/mp4', quoted: mek })
-                    }
-                    }
-                    break
                             case 'ping':
                               const timestamp = speed();
                               const latensi = speed() - timestamp
@@ -652,7 +854,7 @@ async function starts() {
                             fs.unlinkSync(ran)
                           })
                         })
-                        .addOutputOptions([`-vcodec`, `libwebp`, `-vf`, `scale='min(512,iw)':min'(512,ih)':force_original_aspect_ratio=decrease,fps=15, pad=320:320:-1:-1:color=white@0.0, split [a][b]; [a] palettegen=reserve_transparent=on:transparency_color=ffffff [p]; [b][p] paletteuse`])
+                        .addOutputOptions([`-vcodec`, `libwebp`, `-vf`, `scale='min(320,iw)':min'(320,ih)':force_original_aspect_ratio=decrease,fps=15, pad=320:320:-1:-1:color=white@0.0, split [a][b]; [a] palettegen=reserve_transparent=on:transparency_color=ffffff [p]; [b][p] paletteuse`])
                         .toFormat('webp')
                         .save(ran)
                     } else if ((isMedia && mek.message.videoMessage.seconds < 11 || isQuotedVideo && mek.message.extendedTextMessage.contextInfo.quotedMessage.videoMessage.seconds < 11) && args.length == 0) {
