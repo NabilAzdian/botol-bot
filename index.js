@@ -327,7 +327,7 @@ async function starts() {
                     break
                     case 'play':
                     if (!q) return fakegroup(mess.wrongFormat)
-                    data = await fetchJson(`https://api.vhtear.com/ytmp3?query=${q}&apikey=${config.config.vhtearkey}`, { method: 'get' })
+                    data = await fetchJson(`https://api.vhtear.com/ytmp3?query=${q}&apikey=${config.vhtearkey}`, { method: 'get' })
                     playmp3 = data.result
                     var teks = `• Judul : ${playmp3.title}
 • Duration : ${playmp3.duration}
@@ -366,7 +366,7 @@ async function starts() {
                     break
                     case 'ytmp3':
                                         if (!q) return fakegroup(mess.wrongFormat)
-                                        fetchytmp3 = await fetchJson(`https://api.vhtear.com/ytmp3?query=${q}&apikey=$=${config.config.vhtearkey}`, { method: 'get' })
+                                        fetchytmp3 = await fetchJson(`https://api.vhtear.com/ytmp3?query=${q}&apikey=$=${config.vhtearkey}`, { method: 'get' })
                                         ytmp3 = fetchytmp3.result
                                         var resultytmp3 = `
 「 Youtube MP3 」
@@ -388,7 +388,7 @@ async function starts() {
                                         if (!q) return fakegroup(mess.wrongFormat)
                                         try {
                                           fakegroup(mess.wait)
-                             anu = await fetchJson(`https://api.vhtear.com/igprofile?query=${q}&apikey=${config.config.vhtearkey}`)
+                             anu = await fetchJson(`https://api.vhtear.com/igprofile?query=${q}&apikey=${config.vhtearkey}`)
                               bufferigstalk = await getBuffer(anu.result.picture)
                                                 hasil = `「 *INSTAGRAM STALKER* 」
 
@@ -408,19 +408,19 @@ async function starts() {
                                         break
                     case 'tiktok':
                                         if (!q) return fakegroup('Link?')
-                                        ttnwm = await fetchJson(`https://api.vhtear.com/tiktokdl?link=${q}&apikey=${config.config.vhtearkey}`)
+                                        ttnwm = await fetchJson(`https://api.vhtear.com/tiktokdl?link=${q}&apikey=${config.vhtearkey}`)
                                         buffer = await getBuffer(ttnwm.video)
                                         client.sendMessage(from, buffer, video, { caption: 'TIKTOK DOWNLOADER', mimetype: 'video/mp4', quoted: mek })
                                         break
                     case 'tiktoknowm':
                                         if (!q) return fakegroup('Link?')
-                                        ttnwm = await fetchJson(`https://api.vhtear.com/tiktok_no_wm?link=${q}&apikey=${config.config.vhtearkey}`)
+                                        ttnwm = await fetchJson(`https://api.vhtear.com/tiktok_no_wm?link=${q}&apikey=${config.vhtearkey}`)
                                         buffer = await getBuffer(ttnwm.video)
                                         client.sendMessage(from, buffer, video, { caption: 'TIKTOK NO WATERMARK', mimetype: 'video/mp4', quoted: mek })
                                         break
                     case 'pinterest':
                                         if (!q) return fakegroup('yang Mau dicari apaan')
-                                                        data = await fetchJson(`https://api.vhtear.com/pinterest?query=${q}&apikey=${config.config.vhtearkey}`)
+                                                        data = await fetchJson(`https://api.vhtear.com/pinterest?query=${q}&apikey=${config.vhtearkey}`)
                                                         fakestatus(mess.wait)
                                                         if (data.error) return reply(data.error)
                                                         for (let i of data.result) {
@@ -432,7 +432,7 @@ async function starts() {
                                                         break
                      case 'ig':
                     if (!q) return fakegroup(mess.wrongFormat)
-                    igg = await fetchJson(`https://api.vhtear.com/instadl?link=${q}&apikey=${config.config.vhtearkey}`)
+                    igg = await fetchJson(`https://api.vhtear.com/instadl?link=${q}&apikey=${config.vhtearkey}`)
                     for(let ig of igg.post){
                     if (ig.type === "image") {
                     buffig = await getBuffer(ig.urlDownload)
@@ -689,7 +689,7 @@ async function starts() {
                       ranw = getRandom('.webp')
                       ranp = getRandom('.png')
                       reply(mess.wait)
-                      keyrmbg = config.config.vhtearkey
+                      keyrmbg = config.vhtearkey
                       await removeBackgroundFromImageFile({ path: media, apiKey: keyrmbg, size: 'auto', type: 'auto', ranp }).then(res => {
                         fs.unlinkSync(media)
                         let bufferir9vn5 = Buffer.from(res.base64img, 'base64')
