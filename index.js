@@ -32,7 +32,6 @@ const toMs = require('ms')
 const figlet = require('figlet')
 const lolcatjs = require('lolcatjs')
 const phoneNum = require('awesome-phonenumber')
-const translate = require('./lib/translate')
 
 /* CALLBACK */
 const { wait, getBuffer, h2k, generateMessageID, getGroupAdmins, getRandom, banner, start, info, success, close } = require('./lib/functions')
@@ -40,9 +39,10 @@ const { color, bgcolor } = require('./lib/color')
 const { fetchJson, uploadImages } = require('./lib/fetcher')
 const { recognize } = require('./lib/ocr')
 const { error } = require("qrcode-terminal")
-const { exif } = require('./lib/exif')
 const { processTime, sleep, hilih } = require('./lib/index')
 const { custom, random } = require('./lib/meme')
+const Exif = require('./lib/exif');
+const exif = new Exif();
 
 /* DATABASE */
 const left = JSON.parse(fs.readFileSync('./src/left.json'))
@@ -60,11 +60,11 @@ const vcard = 'BEGIN:VCARD\n'
             + 'VERSION:3.0\n' 
             + 'FN:Owner\n' 
             + 'ORG: Creator Botol BOT;\n' 
-            + 'TEL;type=CELL;type=VOICE;waid=${config.ownerNumber}:${config.ownerNumberr}\n' 
+            + `TEL;type=CELL;type=VOICE;waid=${config.ownerNumber}:${config.ownerNumberr}\n`
             + 'END:VCARD'
 
 prefix = '.'
-fake = 'BOTOL BOT'
+fake = '*BOTOL BOT*'
 numbernya = '0'
 
 function kyun(seconds){
@@ -76,7 +76,7 @@ function kyun(seconds){
     var seconds = Math.floor(seconds % 60);
   
     //return pad(hours) + ':' + pad(minutes) + ':' + pad(seconds)
-    return `-[ 𝙍𝙐𝙉𝙏𝙄𝙈𝙀 ]-\n${pad(hours)}H ${pad(minutes)}M ${pad(seconds)}S`
+    return `Runtime\n${pad(hours)}H ${pad(minutes)}M ${pad(seconds)}S`
 }
 
 function addMetadata(packname, author) {
@@ -156,8 +156,8 @@ async function starts() {
             const type = Object.keys(mek.message)[0]
             const { text, extendedText, liveLocation, contact, contactsArray, location, image, video, sticker, document, audio, product } = MessageType
             const time = moment.tz('Asia/Jakarta').format('DD/MM HH:mm:ss')
-            body = (type === 'conversation' && mek.message.conversation.startsWith(prefix)) ? mek.message.conversation : (type == 'imageMessage') && mek.message.imageMessage.caption.startsWith(prefix) ? mek.message.imageMessage.caption : (type == 'videoMessage') && mek.message.videoMessage.caption.startsWith(prefix) ? mek.message.videoMessage.caption : (type == 'extendedTextMessage') && mek.message.extendedTextMessage.text.startsWith(prefix) ? mek.message.extendedTextMessage.text : ''
-            budy = (type === 'conversation') ? mek.message.conversation : (type === 'extendedTextMessage') ? mek.message.extendedTextMessage.text : ''
+            const body = (type === 'conversation' && mek.message.conversation.startsWith(prefix)) ? mek.message.conversation : (type == 'imageMessage') && mek.message.imageMessage.caption.startsWith(prefix) ? mek.message.imageMessage.caption : (type == 'videoMessage') && mek.message.videoMessage.caption.startsWith(prefix) ? mek.message.videoMessage.caption : (type == 'extendedTextMessage') && mek.message.extendedTextMessage.text.startsWith(prefix) ? mek.message.extendedTextMessage.text : ''
+            const budy = (type === 'conversation') ? mek.message.conversation : (type === 'extendedTextMessage') ? mek.message.extendedTextMessage.text : ''
             const command = body.slice(1).trim().split(/ +/).shift().toLowerCase()
             const arg = body.substring(body.indexOf(' ') + 1)
             const args = body.trim().split(/ +/).slice(1)
@@ -174,9 +174,10 @@ async function starts() {
       	    const groupMembers = isGroup ? groupMetadata.participants : ''
       	    const groupAdmins = isGroup ? getGroupAdmins(groupMembers) : ''
       	    const isBotGroupAdmins = groupAdmins.includes(botNumber) || false
-                  const isGroupAdmins = groupAdmins.includes(sender) || false
-                  const isOwner = ownerNumber.includes(sender)
-                  pushname2 = client.contacts[sender1] != undefined ? client.contacts[sender1].vname || client.contacts[sender1].notify : undefined
+            const isGroupAdmins = groupAdmins.includes(sender) || false
+            pushname = client.contacts[sender1] != undefined ? client.contacts[sender1].vname || client.contacts[sender1].notify : undefined
+            const isOwner = ownerNumber.includes(sender)
+            pushname2 = client.contacts[sender1] != undefined ? client.contacts[sender1].vname || client.contacts[sender1].notify : undefined
       			const isUrl = (url) => {
       			    return url.match(new RegExp(/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&/=]*)/, 'gi'))
       			}
@@ -236,15 +237,11 @@ async function starts() {
               mess = {
                 wait: 'Sedang di proses...',
                 success: 'Berhasil!',
-                afkalready: 'AFK sudah diaktifkan sebelumnya...',
-                afkgroupalready: 'AFK digroup ini sudah diaktifkan sebelumnya',
                 wrongFormat: 'Format salah, coba liat lagi di menu',
-                afkdisable: 'Afk berhasil di matikan!',
-                afkenable: 'AFK berhasil diaktifkan!',
-                sedangafk: 'Maaf saya sedang offline, silahkan coba beberapa saat lagi\n\n_SELF-BOT_',
                 error: {
                   stick: 'bukan sticker itu',
-                  Iv: 'Linknya mokad'
+                  Iv: 'Linknya mokad',
+                  bug: 'Error, mungkin disebabkan oleh'
                 },
                 only: {
                   group: 'Khusus grup ngab',
@@ -256,23 +253,67 @@ async function starts() {
               }
 
             const isMedia = (type === 'imageMessage' || type === 'videoMessage')
-      			const isQuotedImage = type === 'extendedTextMessage' && content.includes('imageMessage')
-      			const isQuotedVideo = type === 'extendedTextMessage' && content.includes('videoMessage')
+      	    const isQuotedImage = type === 'extendedTextMessage' && content.includes('imageMessage')
+      	    const isQuotedVideo = type === 'extendedTextMessage' && content.includes('videoMessage')
             const isQuotedSticker = type === 'extendedTextMessage' && content.includes('stickerMessage')
-            if (!isGroup && !isCmd) console.log(color(`[${time}]`, 'yellow'), color("[ PRIVATE ]", "aqua"), 'message from', color(sender1.split("@")[0]))
-            if (isGroup && !isCmd) console.log(color(`[${time}]`, 'yellow'), color('[ GROUP ]', 'aqua'), 'message from', color(sender1.split("@")[0]), 'in', color(groupName))
-            if (!mek.key.fromMe && isGroup && isCmd) console.log(color(`[${time}]`, 'yellow'), color('[ GROUP ]', 'aqua'), 'message from', color(sender1.split("@")[0]), 'in', color(groupName))
-            if (isGroup && isCmd) console.log(color(`[${time}]`, 'yellow'), color('[ EXEC ]'), 'from', color(sender1.split("@")[0]), 'in', color(groupName))
-            if (!isGroup && isCmd) console.log(color(`[${time}]`, 'yellow'), color("[ EXEC ]"), 'from', color(sender1.split("@")[0]))
+            
+                    // Log
+              if (isCmd && !isGroup) console.log(color('[Botol-Bot]'), color(time, 'yellow'), color(`${command} [${args.length}]`), 'from', color(`${pushname}`))
+              if (isCmd && isGroup) console.log(color('[Botol-Bot]'), color(time, 'yellow'), color(`${command} [${args.length}]`), 'from', color(`${pushname}`))
 
                 switch(command) {
+                      case 'resepmasakan':
+                        anu = await fetchJson(`https://api.vhtear.com/resepmasakan?query=${body.slice(14)}&apikey=${config.vhtearkey}`, { method: 'get' })
+                        hasilresep = `*${anu.result.title}*\n${anu.result.desc}\n\n*Untuk Bahan²nya*\n${anu.result.bahan}\n\n*Dan Untuk Tutorialnya*\n${anu.result.cara}`
+                        reply(mess.wait)
+                        buff = await getBuffer(anu.result.image)
+                        client.sendMessage(from, buff, image, { quoted: mek, caption: hasilresep })
+                      break
+                      case 'cersex':
+                        anu = await fetchJson(`https://api.vhtear.com/cerita_sex&apikey=${config.vhtearkey}`, { method: 'get' })
+                        if (anu.error) return reply(anu.error)
+                        sex = await getBuffer(anu.result.image)
+                        reply(mess.wait)
+                        cerita = `• *Judul:* ${anu.result.judul}\n\n${anu.result.cerita}`
+                        client.sendMessage(from, sex, image, { quoted: mek, caption: cerita })
+                      break
+                      case 'puisiimg':
+                        pus = await getBuffer(`https://api.vhtear.com/puisi_image&apikey=${config.vhtearkey}`, { method: 'get' })
+                        client.sendMessage(from, pus, image, { quoted: mek })
+                      break
+                      case 'playstore':
+                        ps = `${body.slice(11)}`
+                        anu = await fetchJson(`https://api.vhtear.com/playstore?query=${ps}&apikey=${config.vhtearkey}`, { method: 'get' })
+                        store = '======================\n'
+                        for (let ply of anu.result) {
+                          store += `• *Nama Apk:* ${ply.title}\n• *ID:* ${ply.app_id}\n• *Developer:* ${ply.developer}\n• *Deskripsi:* ${ply.description}\n• *Link Apk:* https://play.google.com/${ply.url}\n=====================\n`
+                        }
+                        reply(store.trim())
+                      break  
                     case 'join':
-                    if (!isOwner) return fakegroup(mess.only.ownerB)
-                                                  if (!q) return fakestatus('Masukan link group')
-                                                  const codeInvite = `${q}`
-                                                  let response = await client.acceptInvite(codeInvite);
-                                                  console.log(response);
-                                                break
+                           if (!isOwner) return fakegroup(mess.only.ownerB)
+                           if (!q) return fakestatus('Masukan link group')
+                           var codeInvite = body.slice(6).split('https://chat.whatsapp.com/')[1]
+                           if (!codeInvite) return fakegroup ('pastikan link sudah benar!')
+                           var response = await client.acceptInvite(codeInvite);
+                           console.log(response);
+                           break
+                    case 'take':
+              					if (!isQuotedSticker) return fakegroup(`Reply sticker dengan caption *${prefix}take nama|author*`)
+              					var pembawm = body.slice(6)
+              					var encmedia = JSON.parse(JSON.stringify(mek).replace('quotedM','m')).message.extendedTextMessage.contextInfo
+              					var media = await client.downloadAndSaveMediaMessage(encmedia, `./src/sticker/${sender}`)
+              					var packname = pembawm.split('|')[0]
+                                                      if (!packname) return fakegroup(`Reply sticker dengan caption *${prefix}take nama|author*`)
+              					var author = pembawm.split('|')[1]
+                                                      if (!author) return fakegroup(`Reply sticker dengan caption *${prefix}take nama|author*`)
+              					exif.create(packname, author, `takestick_${sender}`)
+              					exec(`webpmux -set exif ./src/sticker/takestick_${sender}.exif ./src/sticker/${sender}.webp -o ./src/sticker/${sender}.webp`, async (error) => {
+              					client.sendMessage(from, fs.readFileSync(`./src/sticker/${sender}.webp`), MessageType.sticker, {quoted: mek})
+              					fs.unlinkSync(media)
+              					fs.unlinkSync(`./src/sticker/takestick_${sender}.exif`)
+              				})
+              				break
                     case 'term':
                     case 'exec':
                     if (!isOwner) return fakegroup(mess.only.ownerB)
@@ -286,7 +327,7 @@ async function starts() {
                     break
                     case 'play':
                     if (!q) return fakegroup(mess.wrongFormat)
-                    data = await fetchJson(`https://api.vhtear.com/ytmp3?query=${q}&apikey=${config.vhtearkey}`, { method: 'get' })
+                    data = await fetchJson(`https://api.vhtear.com/ytmp3?query=${q}&apikey=${config.config.vhtearkey}`, { method: 'get' })
                     playmp3 = data.result
                     var teks = `• Judul : ${playmp3.title}
 • Duration : ${playmp3.duration}
@@ -304,7 +345,107 @@ async function starts() {
                     bufferss = await getBuffer(playmp3.mp3)
                     client.sendMessage(from, bufferss, MessageType.audio, { mimetype: 'audio/mp4', filename: `${playmp3.title}.mp3`, quoted: playing })
                     break
-                    case 'ping':
+                    case 'ytmp4':
+                    if (!q) return fakegroup(mess.wrongFormat)
+                    fetchytmp4 = await fetchJson(`https://api.zeks.xyz/api/ytmp4/2?url=${q}&apikey=apivinz`, { method: 'get' })
+                    ytmp4 = fetchytmp4.result
+                    var resultytmp4 = `
+「 Youtube MP4 」
+
+• Title : ${ytmp4.title}
+• Size : ${ytmp4.size}
+• Quality : ${ytmp4.quality}
+• Ext : ${ytmp4.ext}
+• Link : ${ytmp4.link}`
+                    thumbytmp4 = await getBuffer(ytmp4.thumb)
+                    fakestatus(mess.wait)
+                    const replymp4 = { key: { participant: `0@s.whatsapp.net`, ...(from ? { remoteJid: "status@broadcast" } : {}) }, message: { "imageMessage": { "url": "https://mmg.whatsapp.net/d/f/At0x7ZdIvuicfjlf9oWS6A3AR9XPh0P-hZIVPLsI70nM.enc", "mimetype": "image/jpeg", "caption": `*Title* : ${ytmp4.title}\n*Size* : ${ytmp4.size}\n*Quality* : ${ytmp4.quality}`, "fileSha256": "+Ia+Dwib70Y1CWRMAP9QLJKjIJt54fKycOfB2OEZbTU=", "fileLength": "28777", "height": 1080, "width": 1079, "mediaKey": "vXmRR7ZUeDWjXy5iQk17TrowBzuwRya0errAFnXxbGc=", "fileEncSha256": "sR9D2RS5JSifw49HeBADguI23fWDz1aZu4faWG/CyRY=", "directPath": "/v/t62.7118-24/21427642_840952686474581_572788076332761430_n.enc?oh=3f57c1ba2fcab95f2c0bb475d72720ba&oe=602F3D69", "mediaKeyTimestamp": "1610993486", "jpegThumbnail": fs.readFileSync('./src/image/thumbnail.jpeg') } } }
+                    client.sendMessage(from, thumbytmp4, image, { caption: resultytmp4, quoted: replymp4 })
+                    buffermp4 = await getBuffer(ytmp4.link)
+                    client.sendMessage(from, buffermp4, video, { mimetype: 'video/mp4', caption: resultytmp4, quoted: replymp4 })
+                    break
+                    case 'ytmp3':
+                                        if (!q) return fakegroup(mess.wrongFormat)
+                                        fetchytmp3 = await fetchJson(`https://api.vhtear.com/ytmp3?query=${q}&apikey=$=${config.config.vhtearkey}`, { method: 'get' })
+                                        ytmp3 = fetchytmp3.result
+                                        var resultytmp3 = `
+「 Youtube MP3 」
+
+• Title : ${ytmp3.title}
+• Size : ${ytmp3.size}
+• Duration : ${ytmp3.duration}
+• Ext : ${ytmp3.ext}
+• Id : ${ytmp3.id}
+• Link : ${ytmp3.mp3}`
+                                        thumbytmp3 = await getBuffer(ytmp3.image)
+                                        fakestatus(mess.wait)
+                                        const replymp3 = { key: { participant: `0@s.whatsapp.net`, ...(from ? { remoteJid: "status@broadcast" } : {}) }, message: { "imageMessage": { "url": "https://mmg.whatsapp.net/d/f/At0x7ZdIvuicfjlf9oWS6A3AR9XPh0P-hZIVPLsI70nM.enc", "mimetype": "image/jpeg", "caption": `*Duration* : ${ytmp3.duration}\n*Size* : ${ytmp3.size}\n*Ext* : ${ytmp3.ext}`, "fileSha256": "+Ia+Dwib70Y1CWRMAP9QLJKjIJt54fKycOfB2OEZbTU=", "fileLength": "28777", "height": 1080, "width": 1079, "mediaKey": "vXmRR7ZUeDWjXy5iQk17TrowBzuwRya0errAFnXxbGc=", "fileEncSha256": "sR9D2RS5JSifw49HeBADguI23fWDz1aZu4faWG/CyRY=", "directPath": "/v/t62.7118-24/21427642_840952686474581_572788076332761430_n.enc?oh=3f57c1ba2fcab95f2c0bb475d72720ba&oe=602F3D69", "mediaKeyTimestamp": "1610993486", "jpegThumbnail": fs.readFileSync('./src/image/thumbnail.jpeg') } } }
+                                        client.sendMessage(from, thumbytmp3, image, { caption: resultytmp3, quoted: mek })
+                                        const buffermp3 = await getBuffer(ytmp3.mp3)
+                                        client.sendMessage(from, buffermp3, audio, { mimetype: 'audio/mp4', "filename": `${ytmp3.title}.mp3`, quoted: replymp3 })
+                                        break
+                    case 'igstalk':
+                                        if (!q) return fakegroup(mess.wrongFormat)
+                                        try {
+                                          fakegroup(mess.wait)
+                             anu = await fetchJson(`https://api.vhtear.com/igprofile?query=${q}&apikey=${config.config.vhtearkey}`)
+                              bufferigstalk = await getBuffer(anu.result.picture)
+                                                hasil = `「 *INSTAGRAM STALKER* 」
+
+• Fullname: ${anu.result.full_name}
+• Post: ${anu.result.post_count}
+• Followers: ${convertBalanceToString(anu.result.follower)}
+• Following: ${convertBalanceToString(anu.result.follow)}
+• Jumlah Postingan: ${convertBalanceToString(anu.result.post_count)}
+• Private: ${anu.result.is_private}
+• Bio: ${anu.result.biography}
+• Link: https://www.instagram.com/${anu.result.username}`
+                                                bufferigstalk = await getBuffer(anu.result.picture)
+                                                client.sendMessage(from, bufferigstalk, image, { caption: hasil, quoted: mek})
+                                        } catch (err) {
+                                                fakegroup(`Error! Mungkin nama tidak valid`)
+                                        }
+                                        break
+                    case 'tiktok':
+                                        if (!q) return fakegroup('Link?')
+                                        ttnwm = await fetchJson(`https://api.vhtear.com/tiktokdl?link=${q}&apikey=${config.config.vhtearkey}`)
+                                        buffer = await getBuffer(ttnwm.video)
+                                        client.sendMessage(from, buffer, video, { caption: 'TIKTOK DOWNLOADER', mimetype: 'video/mp4', quoted: mek })
+                                        break
+                    case 'tiktoknowm':
+                                        if (!q) return fakegroup('Link?')
+                                        ttnwm = await fetchJson(`https://api.vhtear.com/tiktok_no_wm?link=${q}&apikey=${config.config.vhtearkey}`)
+                                        buffer = await getBuffer(ttnwm.video)
+                                        client.sendMessage(from, buffer, video, { caption: 'TIKTOK NO WATERMARK', mimetype: 'video/mp4', quoted: mek })
+                                        break
+                    case 'pinterest':
+                                        if (!q) return fakegroup('yang Mau dicari apaan')
+                                                        data = await fetchJson(`https://api.vhtear.com/pinterest?query=${q}&apikey=${config.config.vhtearkey}`)
+                                                        fakestatus(mess.wait)
+                                                        if (data.error) return reply(data.error)
+                                                        for (let i of data.result) {
+                                                                const amsulah = data.result
+                                                                pimterest = amsulah[Math.floor(Math.random() * amsulah.length)]
+                                                                thumb = await getBuffer(pimterest)
+                                                        }
+                                                        client.sendMessage(from, thumb, image, { caption: `*PINTEREST*\n\n\n• Hasil dari: ${q}\n\n• Link pinterest:\n` + pimterest, quoted: mek })
+                                                        break
+                     case 'ig':
+                    if (!q) return fakegroup(mess.wrongFormat)
+                    igg = await fetchJson(`https://api.vhtear.com/instadl?link=${q}&apikey=${config.config.vhtearkey}`)
+                    for(let ig of igg.post){
+                    if (ig.type === "image") {
+                    buffig = await getBuffer(ig.urlDownload)
+                    captigi = `${igg.caption}\n\nby ${igg.owner_username}`
+                    client.sendMessage(from, buffig, MessageType.image, { caption: captigi, quoted: mek })
+                    } else {
+                    bufvig = await getBuffer(ig.urlDownload)
+                    captigv = `${igg.caption}\n\nby ${igg.owner_username}`
+                    client.sendMessage(from, bufvig, MessageType.video, { caption: captigv, mimetype: 'video/mp4', quoted: mek })
+                    }
+                    }
+                    break
+                            case 'ping':
                               const timestamp = speed();
                               const latensi = speed() - timestamp
                               exec(`neofetch --stdout`, (error, stdout, stderr) => {
@@ -336,12 +477,12 @@ async function starts() {
                         }
                         client.sendMessage(from, options, text)
                         break
-                case 'owner':
-                case 'creator':
-                      client.sendMessage(from, {displayname: "Owner botol bot", vcard: vcard}, MessageType.contact, { quoted: mek})
-                      client.sendMessage(from, 'Itu Nomor Owner Botol bot',MessageType.text, { quoted: mek} )
-    	          break
-                case 'f':
+                        case 'owner':
+                        case 'creator':
+                              client.sendMessage(from, {displayname: "Owner botol bot", vcard: vcard}, MessageType.contact, { quoted: mek})
+                              client.sendMessage(from, 'Itu Nomor Owner Botol bot',MessageType.text, { quoted: mek} )
+            	          break
+                        case 'f':
                             var value = args.join(" ")
                             var options = {
                                 text: value,
@@ -363,6 +504,7 @@ async function starts() {
                             client.sendMessage(from, options, text)
                             break
                         case '.':
+                        case 'eval':
                         if (!isOwner) return fakegroup(mess.only.ownerB)
                         let code = args.join(" ")
                     try {
@@ -486,6 +628,7 @@ async function starts() {
                     break
                     case 'stiker':
                     case 'sticker':
+                    case 's':
                     if ((isMedia && !mek.message.videoMessage || isQuotedImage) && args.length == 0) {
                       const encmedia = isQuotedImage ? JSON.parse(JSON.stringify(mek).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo : mek
                       const media = await client.downloadAndSaveMediaMessage(encmedia)
@@ -546,7 +689,7 @@ async function starts() {
                       ranw = getRandom('.webp')
                       ranp = getRandom('.png')
                       reply(mess.wait)
-                      keyrmbg = config.VhtearKey
+                      keyrmbg = config.config.vhtearkey
                       await removeBackgroundFromImageFile({ path: media, apiKey: keyrmbg, size: 'auto', type: 'auto', ranp }).then(res => {
                         fs.unlinkSync(media)
                         let bufferir9vn5 = Buffer.from(res.base64img, 'base64')
@@ -674,6 +817,73 @@ async function starts() {
                         }
                         client.sendMessage(from, teks, text, {contextInfo: {"mentionedJid": members_id }})
                         break
+                    case 'kick':
+            					if (!isGroup) return fakegroup(mess.only.group)
+                                                    if (!isGroupAdmins) return fakegroup(mess.only.admin)
+            					if (!isBotGroupAdmins) return fakegroup(mess.only.Badmin)
+            					if (mek.message.extendedTextMessage === undefined || mek.message.extendedTextMessage === null) return reply('Tag Member yang ingin ditendang')
+            					mentioned = mek.message.extendedTextMessage.contextInfo.mentionedJid
+            					if (mentioned.length > 1) {
+            						teks = 'Perintag diterima mengeluarkan:'
+            						for (let _ of mentioned) {
+            							teks += `@_.split('@')[0]`
+            						}
+            						await mentions(teks, mentioned, true)
+            						client.groupRemove(from, mentioned)
+            					} else {
+            						await mentions(`Perintah diterima mengeluarkan: @${mentioned[0].split('@')[0]}`, mentioned, true)
+            						client.groupRemove(from, mentioned)
+            					}
+            					break
+            				case 'add':
+            					if (!isGroup) return reply(mess.only.group)
+                                                    if (!isGroupAdmins) return fakegroup(mess.only.admin)
+            					if (!isBotGroupAdmins) return reply(mess.only.Badmin)
+            					if (args.length < 1) return reply('Yang mau di add jin ya?')
+            					if (args[0].startsWith('08')) return reply('Gunakan kode negara mas')
+            					try {
+            						num = `${args[0].replace(/ /g, '')}@s.whatsapp.net`
+            						client.groupAdd(from, [num])
+            					} catch (e) {
+            						return fakegroup(`Diprivate ama ${num} njir`)
+            					}
+            					break
+            				case 'promote':
+            					if (!isGroup) return reply(mess.only.group)
+                                                    if (!isGroupAdmins) return fakegroup(mess.only.admin)
+            					if (!isBotGroupAdmins) return reply(mess.only.Badmin)
+            					if (mek.message.extendedTextMessage === undefined || mek.message.extendedTextMessage === null) return reply('Tag target yang ingin di tendang!')
+            					mentioned = mek.message.extendedTextMessage.contextInfo.mentionedJid
+            					if (mentioned.length > 1) {
+            						teks = 'Perintah di terima, Promote :\n'
+            						for (let _ of mentioned) {
+            							teks += `@${_.split('@')[0]}\n`
+            						}
+            						mentions(teks, mentioned, true)
+            						client.groupMakeAdmin(from, mentioned)
+            					} else {
+            						mentions(`Perintah di terima, Promote : @${mentioned[0].split('@')[0]}`, mentioned, true)
+            						client.groupMakeAdmin(from, mentioned)
+            					}
+            					break
+            				case 'demote':
+            					if (!isGroup) return reply(mess.only.group)
+                                                    if (!isGroupAdmins) return fakegroup(mess.only.admin)
+            					if (!isBotGroupAdmins) return reply(mess.only.Badmin)
+            					if (mek.message.extendedTextMessage === undefined || mek.message.extendedTextMessage === null) return reply('Tag target yang ingin di tendang!')
+            					mentioned = mek.message.extendedTextMessage.contextInfo.mentionedJid
+            					if (mentioned.length > 1) {
+            						teks = 'Perintah di terima, Demote :\n'
+            						for (let _ of mentioned) {
+            							teks += `@${_.split('@')[0]}\n`
+            						}
+            						mentions(teks, mentioned, true)
+            						client.groupDemoteAdmin(from, mentioned)
+            					} else {
+            						mentions(`Perintah di terima, Demote : @${mentioned[0].split('@')[0]}`, mentioned, true)
+            						client.groupDemoteAdmin(from, mentioned)
+            					}
+            					break
                     case 'setnick':
                         if (!isOwner) return fakegroup(mess.only.ownerB)
                         entah = args.join(" ")
@@ -721,19 +931,6 @@ async function starts() {
                                   + 'END:VCARD'.trim()
                             client.sendMessage(from, {displayName: disname, vcard: vcard}, contact)
                             break
-                    case 'tr':
-                            if (mek.message.extendedTextMessage === undefined || mek.message.extendedTextMessage === null) {
-                                tolang = args[0]
-                                entah = body.slice(3+args[0].length+1)
-                                translate(entah, tolang)
-                                .then((res) => { reply(`${res}`) })
-                            } else {
-                                tolang = args[0]
-                                entah = mek.message.extendedTextMessage.contextInfo.quotedMessage.conversation
-                                translate(entah, tolang)
-                                .then((res) => { reply(`${res}`) })
-                            }
-                            break
                     case 'tomp3':
                         if ((isMedia && mek.message.videoMessage.seconds <= 30 || isQuotedVideo && mek.message.extendedTextMessage.contextInfo.quotedMessage.videoMessage.seconds <= 30)) {
                             const encmedia = isQuotedVideo ? JSON.parse(JSON.stringify(mek).replace('quotedM','m')).message.extendedTextMessage.contextInfo : mek
@@ -753,7 +950,7 @@ async function starts() {
 • ${prefix}info
 • ${prefix}donasi
 • ${prefix}h - > hidetag
-• ${prefix } f - > forward
+• ${prefix} f - > forward
 • ${prefix}eval - > eval
 • ${prefix}ping - > cek device
 • ${prefix}speed - > cek jaringan bot
@@ -771,6 +968,10 @@ async function starts() {
 • ${prefix}tga - > Tag All
 • ${prefix}tga2 - > Tag All v2
 • ${prefix}tga3 - > Tag All v3
+• ${prefix}add - > Tambahkan orang ke grup
+• ${prefix}kick - > Keluarkan orang dari grup
+• ${prefix}promote - > jadikan member ke atmin
+• ${prefix}demote - > jadikan atmin ke member
 • ${prefix}wait - > What ANime is This ?
 • ${prefix}setnick - > Ganti Nickname WhatsApp kamu
 • ${prefix}setpict - > Ganti photo profile WhatsApp kamu < i > kirim gambar atau reply gambar dengan caption ${prefix}setpict
@@ -779,8 +980,27 @@ async function starts() {
 • ${prefix}owner - > Dapatkan kontak owner
 • ${prefix}kontak - > Kirim Kontak
 • ${prefix}tomp3 - > Video jadi mp3
-• ${prefix}play - > Download music whit yt`)
-                    break
+• ${prefix}take - > Colong stiker orang :v < i > Reply sticker dengan caption ${prefix}take Nama|Author
+• ${prefix}play - > Download music whit yt
+• ${prefix}ytmp3 - > Download music whit yt
+• ${prefix}ytmp4 - > Download video whit yt
+• ${prefix}ig - > Download media from Instagram
+• ${prefix}igstalk - > Stalker Instagram
+• ${prefix}tiktoktnowm - > Download media from tiktod no watermark
+• ${prefix}tiktok - > Download media from tiktok
+• ${prefix}pinterest - > Search in pinterest
+• ${prefix}play - > search music with youtube
+• ${prefix}ytmp3 - > download music with a link 
+• ${prefix}ytmp4 - > download video with a link
+• ${prefix}igstalk - > stalk username instagram
+• ${prefix}ig - > download with url
+• ${prefix}tiktoknowm - > download video tiktok no wm
+• ${prefix}tiktok - > download video tiktok
+• ${prefix}playstore - > search playstore
+• ${prefix}cersex - > adult stories 
+• ${prefix}puisiimg - > random puisi shaped image 
+• ${prefix}resepmasakan - > search recipes `)
+                   break
                           case 'donasi':
                             fakestatus('Halo kak mau donasi?\nBoleh banget kak, list untuk pembayaran donasi ada dibawah in.\n\n• Dana : +62 878-9151-8799\n• Gopay : +62 878-9151-8799\n• Pulsa : +62 878-9151-8799\n\nTerimakasih sudah berdonasi, uangnya untuk memperpanjang server bot.')
                             break

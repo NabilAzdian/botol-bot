@@ -31,8 +31,6 @@ fake = 'BOTOL BOT'
 numbernya = '0'
 ```
 
-Di [index.js](https://github.com/progsysdriver/botol-bot/blob/5e2230786d9d20983a5e7eea968006d782d92958/index.js#L61)
-
 ## Cloning
 ```sh
 git clone https://github.com/progsysdriver/botol-bot
@@ -66,7 +64,17 @@ node index.js
 ```
 ## Fitur dari bot ini
 
-| ketersediaan  |  Fitur |
+| ketersediaan  |  Fitur Downloader|
+| :-----------: | :----: |
+|       ☑      | Play mp3 |
+|       ☑      | ytmp3 Downloader |
+|       ☑      | ytmp4 downloader |
+|       ☑      | tiktok downloader |
+|       ☑      | tiktok no watermark downloader |
+|       ☑      | Ig downloader |
+
+
+| ketersediaan  |  Fitur lain |
 | :-----------: | :----: |
 |       ☑      | Donasi |
 |       ☑      | Info |
@@ -94,10 +102,13 @@ node index.js
 |       ☑      | hilih |
 |       ☑      | Forward to  |
 |       ☑      | Video to mp3  |
-|       ☑      | Play mp3 |
+|       ☑      | Playstore |
+|       ☑      | Resep masakan |
+|       ☑      | Ig stalk |
+|       👙      | coming soon |
 
 ## Terima Kasih
-- [MhankBarBar](https://github.com/github.com/MhankBarBar)
+- [MhankBarBar](https://github.com/MhankBarBar)
 - [Adiwajshing](https://github.com/adiwajshing)
 - [Angga Surya](https://github.com/suryapardana)
 - [Nabil Azdian](https://github.com/NabilAzdian)
