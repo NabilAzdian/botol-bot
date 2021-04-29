@@ -1,4 +1,4 @@
-/ Jangan hilangin nama authornya
+// Jangan hilangin nama authornya
 
 process.on('uncaughtException', console.error)
 const {
