@@ -2,7 +2,7 @@
   "name": "BOTOLBOT",
   "version": "1.0.0",
   "description": "HAVE FUN EVERYBODY",
-  "main": "maim.js",
+  "main": "main.js",
   "directories": {
     "lib": "lib"
   },
