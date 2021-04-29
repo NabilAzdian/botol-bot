@@ -1,5 +1,5 @@
-//MAKASIH DAH PAKE 
-//botolGON NGENTOD EMANG
+/ Jangan hilangin nama authornya
+
 process.on('uncaughtException', console.error)
 const {
     WAConnection,
